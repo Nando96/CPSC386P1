@@ -1,7 +1,7 @@
-import spritesheet, pygame
+import spritesheet
 
-class index:
 
+class Index:
 
     def __init__(self):
         Ss = spritesheet.spritesheet('images/SS.bmp')

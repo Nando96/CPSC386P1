@@ -1,32 +1,38 @@
 import pygame
 from pygame.sprite import Sprite
-from Index import index
+from Index import Index
+
 
 def load_image(name):
     image = pygame.image.load(name)
     return image
 
+
 class Alien(Sprite):
     def __init__(self, ai_settings, screen):
         super(Alien, self).__init__()
-        self.Dead = False
         self.screen = screen
         self.ai_settings = ai_settings
         self.type = 0
 
         # Load the alien image, and set its rect attribute.
-        Ims = index()
-        self.images = Ims.a1
-
+        ims = Index()
+        self.images = ims.a1
+        self.timer = 0
         self.index = 0
         self.image = self.images[self.index]
         self.rect = self.image.get_rect()
         self.image = self.images[self.index]
-        self.Explode = index().E1
+        self.Explode = Index().E1
         self.rect = self.image.get_rect()
         self.rect.x = self.rect.width
         self.rect.y = self.rect.height
         self.x = float(self.rect.x)
+
+        self.dead = False
+        self.death_index = None
+
+        self.last_frame = None
 
     def check_edges(self):
         screen_rect = self.screen.get_rect()
@@ -35,21 +41,17 @@ class Alien(Sprite):
         elif self.rect.left <= 0:
             return True
 
-    def start_death(self):
-        self.Dead = True
-
-    def death(self):
-        self.image = self.Explode[0]
-        if pygame.time.get_ticks() - self.timer >= 100:
-            self.index += 1
-            if self.index >= len(self.images):
-                self.index = 0
-            self.image = self.Explode[self.index]
-            self.rect.x = self.x
-            self.timer = pygame.time.get_ticks()
+    def begin_death(self):
+        """Set alien's death flag and begin death animation"""
+        self.dead = True
+        self.death_index = 0
+        self.image = self.Explode[self.death_index]
+        self.last_frame = pygame.time.get_ticks()
 
     def update(self):
-        if not self.Dead:
+        self.x += (self.ai_settings.alien_speed_factor * self.ai_settings.fleet_direction)
+        self.rect.x = self.x
+        if not self.dead:
             if pygame.time.get_ticks() - self.timer >= 360:
                 self.index += 1
                 if self.index >= len(self.images):
@@ -57,13 +59,15 @@ class Alien(Sprite):
                 self.image = self.images[self.index]
                 self.rect.x = self.x
                 self.timer = pygame.time.get_ticks()
-
-        if self.Dead:
-            self.death()
-
-        self.x += (self.ai_settings.alien_speed_factor *
-                   self.ai_settings.fleet_direction)
-        self.rect.x = self.x
+        else:
+            if pygame.time.get_ticks() - self.timer >= 100:   # At least 20 millisecond delay between frames
+                self.death_index += 1
+                if self.death_index >= len(self.Explode):
+                    self.kill()
+                else:
+                    self.image = self.Explode[self.death_index]
+                    self.rect.x = self.x
+                    self.timer = pygame.time.get_ticks()
 
     def blitme(self):
         """Draw the alien at its current location."""
@@ -77,8 +81,8 @@ class Aone(Alien):
         self.screen = screen
         self.ai_settings = ai_settings
         self.value = 10
-        Ims = index()
-        self.images = Ims.a1
+        ims = Index()
+        self.images = ims.a1
 
         self.index = 0
         self.image = self.images[self.index]
@@ -91,6 +95,7 @@ class Aone(Alien):
 
         # Store the alien's exact position.
         self.x = float(self.rect.x)
+
 
 class Atwo(Alien):
     def __init__(self, ai_settings, screen):
@@ -99,8 +104,8 @@ class Atwo(Alien):
         self.screen = screen
         self.ai_settings = ai_settings
         self.value = 20
-        Ims = index()
-        self.images = Ims.a2
+        ims = Index()
+        self.images = ims.a2
 
         self.index = 0
         self.image = self.images[self.index]
@@ -113,6 +118,7 @@ class Atwo(Alien):
 
         # Store the alien's exact position.
         self.x = float(self.rect.x)
+
 
 class Athree(Alien):
     def __init__(self, ai_settings, screen):
@@ -122,8 +128,8 @@ class Athree(Alien):
         self.ai_settings = ai_settings
         self.value = 40
         # Load the alien image, and set its rect attribute.
-        Ims = index()
-        self.images = Ims.a3
+        ims = Index()
+        self.images = ims.a3
 
         self.index = 0
         self.image = self.images[self.index]
@@ -138,6 +144,7 @@ class Athree(Alien):
         # Store the alien's exact position.
         self.x = float(self.rect.x)
 
+
 class Mother(Alien):
     def __init__(self, ai_settings, screen):
         Alien.__init__(self, ai_settings, screen)
@@ -146,8 +153,8 @@ class Mother(Alien):
         self.ai_settings = ai_settings
         self.on = False
         # Load the alien image, and set its rect attribute.
-        Ims = index()
-        self.images = Ims.a4
+        ims = Index()
+        self.images = ims.a4
 
         self.index = 0
         self.image = self.images[self.index]

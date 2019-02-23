@@ -1,10 +1,9 @@
-import pygame
 from pygame.sprite import Sprite
-from random import choice
 
-class alien_ship(Sprite):
+
+class alienship(Sprite):
     def __init__(self, ai_settings, screen):
-        super(alien_ship, self).__init__()
+        super(alienship, self).__init__()
         # screen, settings, score values
         self.screen = screen
         self.ai_settings = ai_settings

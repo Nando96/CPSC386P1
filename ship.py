@@ -1,6 +1,7 @@
-import pygame, spritesheet
+import pygame
 from pygame.sprite import Sprite
-from Index import index
+from Index import Index
+
 
 class Ship(Sprite):
 
@@ -9,8 +10,9 @@ class Ship(Sprite):
         self.screen = screen
         self.ai_settings = ai_settings
 
-        Ims = index()
-        self.images = Ims.s1
+        ims = Index()
+        self.images = ims.s1
+        self.explode = ims.E1
 
         self.index = 0
         self.image = self.images[self.index]
@@ -20,6 +22,11 @@ class Ship(Sprite):
         # Start each new ship at the bottom center of the screen.
         self.rect.centerx = self.screen_rect.centerx
         self.rect.bottom = self.screen_rect.bottom
+        self.death_index = None
+        self.last_frame = None
+
+        self.dieing = False
+        self.dead = False
 
         # Store a decimal value for the ship's center.
         self.center = float(self.rect.centerx)
@@ -31,23 +38,37 @@ class Ship(Sprite):
     def center_ship(self):
         self.center = self.screen_rect.centerx
 
+    def death(self):
+        self.dead = True
+        self.death_index = 0
+        self.image = self.explode[self.death_index]
+        self.last_frame = pygame.time.get_ticks()
+
     def update(self):
         # Update the ship's center value, not the rect.
-        if pygame.time.get_ticks() - self.timer >= 360:
-            self.index += 1
-            if self.index >= len(self.images):
-                self.index = 0
-            self.image = self.images[self.index]
-            #self.rect.x = self.x
-            self.timer = pygame.time.get_ticks()
+            if not self.dieing:
+                if pygame.time.get_ticks() - self.timer >= 360:
+                    self.index += 1
+                    if self.index >= len(self.images):
+                        self.index = 0
+                    self.image = self.images[self.index]
+                    self.timer = pygame.time.get_ticks()
 
-        if self.moving_right and self.rect.right < self.screen_rect.right:
-            self.center += self.ai_settings.ship_speed_factor
-        if self.moving_left and self.rect.left > 0:
-            self.center -= self.ai_settings.ship_speed_factor
+                if self.moving_right and self.rect.right < self.screen_rect.right:
+                    self.center += self.ai_settings.ship_speed_factor
+                if self.moving_left and self.rect.left > 0:
+                    self.center -= self.ai_settings.ship_speed_factor
 
         # Update rect object from self.center.
-        self.rect.centerx = self.center
+                self.rect.centerx = self.center
+            else:
+                if pygame.time.get_ticks() - self.timer >= 100:   # At least 20 millisecond delay between frames
+                    self.death_index += 1
+                    if self.death_index >= len(self.explode):
+                        self.dieing = False
+                    else:
+                        self.image = self.explode[self.death_index]
+                        self.timer = pygame.time.get_ticks()
 
     def blitme(self):
         self.screen.blit(self.image, self.rect)

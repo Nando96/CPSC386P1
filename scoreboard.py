@@ -17,6 +17,8 @@ class Scoreboard:
         self.prep_level()
         self.prep_ships()
 
+        self.ships = Group()
+
     def prep_score(self):
         rounded_score = int(round(self.stats.score, -1))
         score_str = "{:,}".format(rounded_score)
@@ -41,8 +43,6 @@ class Scoreboard:
     def prep_level(self):
         self.level_image = self.font.render(str(self.stats.level), True,
                                             self.text_color, self.ai_settings.bg_color)
-
-        # Position the level below the score.
         self.level_rect = self.level_image.get_rect()
         self.level_rect.right = self.score_rect.right
         self.level_rect.top = self.score_rect.bottom + 10

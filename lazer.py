@@ -1,14 +1,15 @@
 
 import pygame
-from Index import index
+from Index import Index
 
-class lazer(pygame.sprite.Sprite):
+
+class Lazer(pygame.sprite.Sprite):
     def __init__(self, ai_settings, screen, alien):
-        super(lazer, self).__init__()
+        super(Lazer, self).__init__()
         self.screen = screen
 
-        Ims = index()
-        self.images = Ims.L1
+        ims = Index()
+        self.images = ims.L1
 
         self.index = 0
         self.image = self.images[self.index]
@@ -28,7 +29,6 @@ class lazer(pygame.sprite.Sprite):
             if self.index >= len(self.images):
                 self.index = 0
             self.image = self.images[self.index]
-            #self.rect.x = self.x
             self.timer = pygame.time.get_ticks()
 
     def blitme(self):

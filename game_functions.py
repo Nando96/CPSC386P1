@@ -4,8 +4,8 @@ from time import sleep
 import pygame
 import random
 from bullet import Bullet
-from alien import Aone, Atwo, Athree, Mother
-from lazer import lazer
+from alien import Aone, Atwo, Athree
+from lazer import Lazer
 
 
 def check_keydown_events(event, ai_settings, screen, ship, bullets):
@@ -43,7 +43,7 @@ def check_events(ai_settings, screen, stats, sb, play_button, ship, aliens,
 
 def check_play_button(ai_settings, screen, stats, sb, play_button, ship,
                       aliens, bullets, mouse_x, mouse_y):
-    button_clicked = play_button.rect.collidepoint(mouse_x, mouse_y)
+    button_clicked = play_button.check_button(mouse_x, mouse_y)
     if button_clicked and not stats.game_active:
         ai_settings.initialize_dynamic_settings()
         pygame.mouse.set_visible(False)
@@ -63,60 +63,73 @@ def check_play_button(ai_settings, screen, stats, sb, play_button, ship,
 def fire_bullet(ai_settings, screen, ship, bullets):
     sound1 = pygame.mixer.Sound("sounds/fire.wav")
 
-    for i in range(3):
-        new_bullet = Bullet(ai_settings, screen, ship, yoffset=i * .5 * ship.rect.height)
-
+    if len(bullets) < ai_settings.bullets_allowed:
+        new_bullet = Bullet(ai_settings, screen, ship, yoffset=0 * ship.rect.height)
+        sound1.play()
         bullets.add(new_bullet)
     bullets.update()
+
 
 def fire_alien(ai_settings, screen, aliens, lazers):
     firing_alien = random.choice(aliens.sprites())
     if len(lazers) < ai_settings.lazer_ok and \
             (ai_settings.beam_stamp is None or
              (abs(pygame.time.get_ticks() - ai_settings.beam_stamp) > ai_settings.beam_time)):
-        new_lazer = lazer(ai_settings, screen, firing_alien)
+        new_lazer = Lazer(ai_settings, screen, firing_alien)
 
         lazers.add(new_lazer)
 
-def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers, play_button, bunkers, mothership):
+
+def update_screen(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers, play_button, bunkers):
     screen.fill(ai_settings.bg_color)
+
     for bullet in bullets.sprites():
         bullet.draw_bullet()
+
     ship.blitme()
+
     aliens.draw(screen)
-    for lazer in lazers.sprites():
-        lazer.blitme()
+
+    for lazor in lazers.sprites():
+        lazor.blitme()
+
     sb.show_score()
+
     if not stats.game_active:
         play_button.draw_button()
+
     bunkers.update()
     check_bunker_collisions(lazers, bullets, bunkers)
+
     pygame.display.flip()
 
 
-def update_bullets(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def update_bullets(ai_settings, screen, stats, sb, aliens, bullets):
     bullets.update()
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
 
-    check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets)
+    check_bullet_alien_collisions(ai_settings, screen, stats, sb, aliens, bullets)
 
-def update_bullets_lazers(ai_settings, screen, stats, sb, ship, aliens, lazers, bullets):
+
+def update_bullets_lazers(ai_settings, lazers, bullets):
     bullets.update()
     lazers.update()
     # Remove bullets that are out of view
     for bullet in bullets.copy():
         if bullet.rect.bottom <= 0:
             bullets.remove(bullet)
-    for lazer in lazers.copy():
-        if lazer.rect.bottom > ai_settings.screen_height:
-            lazers.remove(lazer)
+    for lazor in lazers.copy():
+        if lazor.rect.bottom > ai_settings.screen_height:
+            lazers.remove(lazor)
+
 
 def check_high_score(stats, sb):
     if stats.score > stats.high_score:
         stats.high_score = stats.score
         sb.prep_high_score()
+
 
 def check_bunker_collisions(lazers, bullets, bunkers):
     collisions = pygame.sprite.groupcollide(bullets, bunkers, True, False)
@@ -128,15 +141,16 @@ def check_bunker_collisions(lazers, bullets, bunkers):
         for block in b_list:
             block.damage(top=True)
 
-def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, bullets):
-    collisions = pygame.sprite.groupcollide(bullets, aliens, True, True)
+
+def check_bullet_alien_collisions(ai_settings, screen, stats, sb, aliens, bullets):
+    collisions = pygame.sprite.groupcollide(bullets, aliens, True, False)
 
     if collisions:
         for aliens in collisions.values():
             for killed in aliens:
 
                 stats.score += killed.value
-                killed.start_death()
+                killed.begin_death()
             sb.prep_score()
         check_high_score(stats, sb)
 
@@ -146,7 +160,7 @@ def check_bullet_alien_collisions(ai_settings, screen, stats, sb, ship, aliens, 
         stats.level += 1
         sb.prep_level()
 
-        create_fleet(ai_settings, screen, ship, aliens)
+        create_fleet(ai_settings, screen, aliens)
 
 
 def check_fleet_edges(ai_settings, aliens):
@@ -163,6 +177,9 @@ def change_fleet_direction(ai_settings, aliens):
 
 
 def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers):
+    ship.death()
+    ship.update()
+
     if stats.ships_left > 0:
         stats.ships_left -= 1
         sb.prep_ships()
@@ -178,11 +195,11 @@ def ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers):
     sleep(1)
 
 
-def check_aliens_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets):
+def check_aliens_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers):
     screen_rect = screen.get_rect()
     for alien in aliens.sprites():
         if alien.rect.bottom >= screen_rect.bottom:
-            ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets)
+            ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers)
             break
 
 
@@ -190,12 +207,14 @@ def update_aliens(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers)
     check_fleet_edges(ai_settings, aliens)
     aliens.update()
     if pygame.sprite.spritecollideany(ship, aliens):
-        ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets)
-    check_aliens_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets)
+        ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers)
+    check_aliens_bottom(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers)
     if aliens.sprites():
         fire_alien(ai_settings, screen, aliens, lazers)
     if pygame.sprite.spritecollideany(ship, lazers):
         ship_hit(ai_settings, screen, stats, sb, ship, aliens, bullets, lazers)
+
+
 def get_number_aliens_x(ai_settings, alien_width):
     available_space_x = ai_settings.screen_width - 2 * alien_width
     number_aliens_x = int(available_space_x / (2 * alien_width))
@@ -229,12 +248,12 @@ def create_fleet(ai_settings, screen, aliens):
     alien = Athree(ai_settings, screen)
     number_aliens_x = get_number_aliens_x(ai_settings, alien.rect.width)
 
-    number_rows = 6;
-    a_num = 1
+    number_rows = 6
+
     for row_number in range(number_rows):
-        if(row_number == 0 or row_number == 1):
+        if row_number == 0 or row_number == 1:
             a_num = 1
-        elif (row_number == 2 or row_number == 3):
+        elif row_number == 2 or row_number == 3:
             a_num = 2
         else:
             a_num = 3
@@ -242,5 +261,3 @@ def create_fleet(ai_settings, screen, aliens):
 
             create_alien(a_num, ai_settings, screen, aliens, alien_number,
                          row_number)
-
-
